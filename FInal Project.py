@@ -1,3 +1,5 @@
+#Pieced together parts of labs we will likely use
+
 import json
 import time
 import urllib.request
