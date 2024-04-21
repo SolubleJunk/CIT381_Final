@@ -1,17 +1,39 @@
-#Pieced together parts of labs we will likely use
-
 import json
 import time
 import urllib.request
 import I2C_LCD_driver
-from gpiozero import LED
+from gpiozero import LED, Button
+import board
+import busio
+from adafruit_seesaw.seesaw import Seesaw
 
-#create the necessary objects for turning on/off the LED, relay, and LCD screen
-led = LED(17, active_high = False)
 
-relay =  LED(5)
+on_off_button = Button(12, pull_up=True)
 
+armedState = False
+def button_press():
+        global armedState
+        if armedState:
+                armedState = False
+                print("The system is now off")
+                relay.off()
+                thelcd.lcd_clear()
+        else:
+                armedState = True
+                print("The system is now on")
+
+on_off_button.when_pressed = button_press
+
+
+relay =  LED(19)
+
+#should be address 27
 thelcd = I2C_LCD_driver.lcd()
+
+# Initialize the I2C connection
+i2c_bus = busio.I2C(board.SCL, board.SDA)
+#uses address 36
+ss = Seesaw(i2c_bus, addr=0x36)
 
 # Get user's ZIP to find location ID
 zip = input("Enter you zip code: ")
@@ -91,26 +113,39 @@ will_it_rain_amount = forecast['DailyForecasts'][1]['Day']['TotalLiquid']['Value
 # Main Loop
 while True:
     #Turn off or clear all objects at the start of each loop
-    led.off()
     relay.off()
     thelcd.lcd_clear()
-    # check recent precipitation levels
-    if float(precip_24_hours) >= 0.15:
-        print("No irrigation needed: Historical Rain")
-    # check if it is raining
-    elif is_it_raining:
-        print("No irrigation needed: It is currently raining")
-    # check if it will rain tomorrow
-    elif int(will_it_rain_chance) >= 70 and float(will_it_rain_amount) >= 0.15:
-        print("No irrigation needed: Future rain")
-    # If none of the above is true we need to irrigate
-    else:
-        print("Irrigating")
-        led.on()
-        relay.on()
 
-    #display the current temp on the LCD screen
-    thelcd.lcd_display_string("Current Temp: ", 1)
-    thelcd.lcd_display_string(str(current_conditions[0]['Temperature']['Imperial']['Value']), 2)
-    # Delay the loop so it doesnt call the API too often (I had it set lower for testing purposes)
-    time.sleep(30)
+    #get moisture level from sensor
+    moisture = ss.moisture_read()
+    if armedState:
+        if int(moisture) < 500:
+            # check recent precipitation levels
+            if float(precip_24_hours) >= 0.15:
+                print("No irrigation needed: Historical Rain")
+            # check if it is raining
+            elif is_it_raining:
+                print("No irrigation needed: It is currently raining")
+            # check if it will rain tomorrow
+            elif int(will_it_rain_chance) >= 70 and float(will_it_rain_amount) >= 0.15:
+                print("No irrigation needed: Future rain")
+            # If none of the above is true we need to irrigate
+            else:
+                print("Irrigating")
+                relay.on()
+                #create and send email with current info
+        else:
+            print("No irrigation needed: Suffiecient soil moisture")
+
+        #display the current temp on the LCD screen
+        thelcd.lcd_display_string("Current Temp: ", 1)
+        thelcd.lcd_display_string(str(current_conditions[0]['Temperature']['Imperial']['Value']), 2)
+        # Delay the loop so it doesnt call the API too often (I had it set lower for testing purposes)
+        time.sleep(30)
+    else:
+        print("The system is currently turned off")
+        time.sleep(10)
+
+
+
+
