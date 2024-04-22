@@ -1,3 +1,6 @@
+
+import smtplib, ssl
+from email.message import EmailMessage
 import json
 import time
 import urllib.request
@@ -11,6 +14,8 @@ from adafruit_seesaw.seesaw import Seesaw
 on_off_button = Button(12, pull_up=True)
 
 manualOverride = Button(16, pull_up=True)
+
+manual_send_email_button = Button(20, pull_up=True)
 
 relay =  LED(19)
 
@@ -84,6 +89,9 @@ def manual_override():
     else:
         print("Cannot activate manual override: system is not on")
 
+def manual_send_email():
+    send_email("wardc6@nku.edu", "Final Test", "This email was sent by pressing a button")
+
 def get_location_id(zip):
     # Build url with user's zip
     apiURl = "http://dataservice.accuweather.com/locations/v1/postalcodes/US/search?apikey=zC5MGuMmgTlHcA6tenI14U9Ehe0DmtEI&q=%s&details=true" % zip
@@ -154,9 +162,12 @@ will_it_rain_chance = 30
 
 will_it_rain_amount = 0.01
 
-
+#if the on/off button is pressed turn on/off the system
 on_off_button.when_pressed = button_press
+#if the manual override button is pressed override the current state of the loop and irrigate for X amount of time
 manualOverride.when_pressed = manual_override
+#if the send email button is pressed send an email with current information about the system
+manual_send_email_button.when_pressed = manual_send_email
 # Main Loop
 while True:
     if manual_override_active and time.time() - manual_override_start_time >= 40:
@@ -188,15 +199,15 @@ while True:
                 #create and send email with current info
         else:
             print("No irrigation needed: Suffiecient soil moisture")
-
-        #display the current temp on the LCD screen
-        #thelcd.lcd_display_string("Current Temp: ", 1)
-        #thelcd.lcd_display_string(str(current_conditions[0]['Temperature']['Imperial']['Value']), 2)
+        #display the current status of the sytem on the LCD screen
+        thelcd.lcd_display_string("Status: ON", 1)
         # Delay the loop so it doesnt call the API too often (I had it set lower for testing purposes)
         time.sleep(30)
     else:
         print("The system is currently turned off")
+        thelcd.lcd_display_string("Status: OFF", 1)
         time.sleep(10)
+
 
 
 
