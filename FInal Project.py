@@ -1,4 +1,3 @@
-
 import smtplib, ssl
 from email.message import EmailMessage
 import json
@@ -9,7 +8,8 @@ from gpiozero import LED, Button
 import board
 import busio
 from adafruit_seesaw.seesaw import Seesaw
-
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 on_off_button = Button(12, pull_up=True)
 
@@ -31,18 +31,19 @@ ss = Seesaw(i2c_bus, addr=0x36)
 zip = input("Enter you zip code: ")
 
 #function for sending an email
-def send_email(recipient_email, subject, body):
+def send_email(html_content, subject, recipient_email):
         port = 587  # For starttls
         smtp_server = "smtp.gmail.com"
-        sender_email = "wardc6cit381@gmail.com"  # Enter your address
-        password = "ynle hrzg rgqu bvfo"
+        sender_email = "cit381001@gmail.com"  # Enter your address
+        password = "fapwiqvrwryitycv"
         # Build the email message
-        msg = EmailMessage()
-        msg.set_content(body)
+        msg = MIMEMultipart("alternative")
+        # Attach HTML content to the email
+        msg.attach(MIMEText(html_content, 'html'))
+        
         msg['Subject'] = subject
         msg['From'] = sender_email
         msg['To'] = recipient_email
-
         # Send the email
         context = ssl.create_default_context()
         if port == 587:
@@ -64,6 +65,36 @@ def send_email(recipient_email, subject, body):
                         print("the email has been sent")
         else:
                 print("the port you chose is not supported")
+                
+#function to return html content for email with up to date irrigation and moisture status
+def html_for_email(is_irrigating, moisture):
+    if is_irrigating == True:
+        irrigation_status = "irrigating"
+    else:
+        irrigation_status = "not irrigating"
+    html_content=f"""
+    <html>   
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <body style=" min-height: 50vh; background-color: #F0F0F0; border-radius: 10px;">
+        <table align="center" vertical-align: middle">
+            <tr>
+                <td align="center">
+                    <table width="400" height="300" border="5" style="background-color: #FFFFFF; margin-top: 22px; border-radius: 35px; border-color:#9E9E9E; border-style:solid;">
+                        <tr>
+                            <td  style="padding: 20px; text-align: center; color: #1A4D2E; border-style: hidden;">
+                                <h1 style="color: #1A4D2E;">Irrigation Alert</h1>
+                                <p style="color: #1A4D2E;">  Your system is currently <b>{irrigation_status}</b></p>
+                                <p style="color: #1A4D2E;"> Soil Moisture: <b>{moisture}</b></p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    return html_content
 
 armedState = False
 def button_press():
@@ -153,6 +184,13 @@ def get_forecast(location_id):
 
 #will_it_rain_amount = forecast['DailyForecasts'][1]['Day']['TotalLiquid']['Value']
 
+#variables for email subject and recipient
+subject = "Irrigation Alert"
+recipient_email = "christinamarie42003@gmail.com"
+
+#variable to track irrigation status 
+is_irrigating = False
+
 #Set of test variables so that the program will always irrigate
 precip_24_hours = 0.01
 
@@ -188,7 +226,7 @@ while True:
                 print("No irrigation needed: Historical Rain")
             # check if it is raining
             elif is_it_raining:
-                print("No irrigation needed: It is currently raining")
+                print("No irrigation needed: It is currently raining")     
             # check if it will rain tomorrow
             elif int(will_it_rain_chance) >= 70 and float(will_it_rain_amount) >= 0.15:
                 print("No irrigation needed: Future rain")
@@ -196,7 +234,9 @@ while True:
             else:
                 print("Irrigating")
                 relay.on()
-                #create and send email with current info
+                is_irrigating = True # update irrigation status
+                html_content = html_for_email(is_irrigating, moisture) #get html content for email
+                send_email(html_content, subject, recipient_email) #send email 
         else:
             print("No irrigation needed: Suffiecient soil moisture")
         #display the current status of the sytem on the LCD screen
