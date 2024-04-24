@@ -34,13 +34,13 @@ zip = input("Enter you zip code: ")
 def send_email(html_content, subject, recipient_email):
         port = 587  # For starttls
         smtp_server = "smtp.gmail.com"
-        sender_email = "cit381001@gmail.com"  # Enter your address
-        password = "fapwiqvrwryitycv"
+        sender_email = "wardc6cit381@gmail.com"  # Enter your address
+        password = "ynle hrzg rgqu bvfo"
         # Build the email message
         msg = MIMEMultipart("alternative")
         # Attach HTML content to the email
         msg.attach(MIMEText(html_content, 'html'))
-        
+
         msg['Subject'] = subject
         msg['From'] = sender_email
         msg['To'] = recipient_email
@@ -65,7 +65,7 @@ def send_email(html_content, subject, recipient_email):
                         print("the email has been sent")
         else:
                 print("the port you chose is not supported")
-                
+
 #function to return html content for email with up to date irrigation and moisture status
 def html_for_email(is_irrigating, moisture):
     if is_irrigating == True:
@@ -73,7 +73,7 @@ def html_for_email(is_irrigating, moisture):
     else:
         irrigation_status = "not irrigating"
     html_content=f"""
-    <html>   
+    <html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <body style=" min-height: 50vh; background-color: #F0F0F0; border-radius: 10px;">
         <table align="center" vertical-align: middle">
@@ -115,13 +115,15 @@ def manual_override():
         global manual_override_active, manual_override_start_time
         print("Manual Override enabled: Watering for 30 minutes")
         relay.on()
+        html_content = html_for_email(is_irrigating, moisture)
+        send_email(html_content, subject, recipient_email)
         manual_override_active = True
         manual_override_start_time = time.time()
     else:
         print("Cannot activate manual override: system is not on")
 
 def manual_send_email():
-    send_email("wardc6@nku.edu", "Final Test", "This email was sent by pressing a button")
+    send_email(html_content, subject, recipient_email)
 
 def get_location_id(zip):
     # Build url with user's zip
@@ -186,15 +188,15 @@ def get_forecast(location_id):
 
 #variables for email subject and recipient
 subject = "Irrigation Alert"
-recipient_email = "christinamarie42003@gmail.com"
+recipient_email = "wardc6cit381@gmail.com"
 
-#variable to track irrigation status 
+#variable to track irrigation status
 is_irrigating = False
 
 #Set of test variables so that the program will always irrigate
 precip_24_hours = 0.01
 
-is_it_raining = True
+is_it_raining = False
 
 will_it_rain_chance = 30
 
@@ -226,7 +228,7 @@ while True:
                 print("No irrigation needed: Historical Rain")
             # check if it is raining
             elif is_it_raining:
-                print("No irrigation needed: It is currently raining")     
+                print("No irrigation needed: It is currently raining")
             # check if it will rain tomorrow
             elif int(will_it_rain_chance) >= 70 and float(will_it_rain_amount) >= 0.15:
                 print("No irrigation needed: Future rain")
@@ -236,17 +238,22 @@ while True:
                 relay.on()
                 is_irrigating = True # update irrigation status
                 html_content = html_for_email(is_irrigating, moisture) #get html content for email
-                send_email(html_content, subject, recipient_email) #send email 
+                send_email(html_content, subject, recipient_email) #send email
         else:
             print("No irrigation needed: Suffiecient soil moisture")
+            is_irrigating = True
         #display the current status of the sytem on the LCD screen
         thelcd.lcd_display_string("Status: ON", 1)
+        thelcd.lcd_display_string("Moisture: " + str(moisture), 2)
         # Delay the loop so it doesnt call the API too often (I had it set lower for testing purposes)
         time.sleep(30)
     else:
         print("The system is currently turned off")
         thelcd.lcd_display_string("Status: OFF", 1)
+
+        thelcd.lcd_display_string("Moisture: " + str(moisture), 2)
         time.sleep(10)
+
 
 
 
