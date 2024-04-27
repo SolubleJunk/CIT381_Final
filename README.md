@@ -4,10 +4,15 @@ Final Project for CIT381 - Spring 2024
 Sample Comments Block For Sections
 
 ###########################
+
 \# This section is intended to do XYZ
+
 \# Notes:
+
 \# Name - Changes
+
 \# Name - Changes
+
 ###########################
 
 
