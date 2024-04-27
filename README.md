@@ -34,13 +34,13 @@ Pseudo-code:
 - Instantiation of Variables for Objects
 - Hard coded information
 - Functions For Code
-Function to send E-mail
-Function for HTML E-mail Formatting
-Button Press Event
-Manual override button event
-Manual send e-mail event
-Get Accuweather Location_ID
-Get Accuweather Current Conditions
-Get Accuweather Historical Data
-Get Accuweather Forecast
+--Function to send E-mail
+--Function for HTML E-mail Formatting
+--Button Press Event
+--Manual override button event
+--Manual send e-mail event
+--Get Accuweather Location_ID
+--Get Accuweather Current Conditions
+--Get Accuweather Historical Data
+--Get Accuweather Forecast
 
