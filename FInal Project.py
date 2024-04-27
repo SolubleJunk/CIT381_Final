@@ -1,3 +1,23 @@
+###########################
+# Final Project - Group 5
+# Notes: Irrigation Project
+#
+# Primary Features:
+# Monthly Report Sending
+# Manual Report Prompting via Button
+# Intelligent Watering based on weather
+# Monitoring Moisture Level with Sensor -- If Sensor Levels is too low force a watering session
+# Manual Override to Prompt Watering Regardless
+# On/Off switch for System System
+# LCD Screen for visual display of On/Off and Moisture Level
+#
+# Colby Ward, Christina Umberg, Nick Carter, Dennis Briggs
+###########################
+
+###########################
+# Required Library Imports
+# 
+###########################
 import smtplib, ssl
 from email.message import EmailMessage
 import json
@@ -11,28 +31,45 @@ from adafruit_seesaw.seesaw import Seesaw
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# Device Object Instantiation
+# Easy Devices
 on_off_button = Button(12, pull_up=True)
-
 manualOverride = Button(16, pull_up=True)
-
 manual_send_email_button = Button(20, pull_up=True)
-
 relay1 = LED(6, active_high=False)
 relay2 = LED(24, active_high=False)
 
-
-#should be address 27
+# LCD Setup - Should be address 27
 thelcd = I2C_LCD_driver.lcd()
 
-# Initialize the I2C connection
+# Moisture Setup - Should be address 36
 i2c_bus = busio.I2C(board.SCL, board.SDA)
-#uses address 36
 ss = Seesaw(i2c_bus, addr=0x36)
 
-# Get user's ZIP to find location ID
-zip = "41073"
+###########################
+# Hard Coded Variables
+# 
+###########################
 
-#function for sending an email
+zip = "41073"
+armedState = True
+manual_override_active = False
+manual_override_start_time = 0
+
+# Variables for email subject and recipient
+subject = "Irrigation Alert"
+recipient_email = "wardc6cit381@gmail.com"
+
+# Variable to track irrigation status
+is_irrigating = False
+
+
+###########################
+# Defined Functions
+# 
+###########################
+
+# E-mail Sending to User
 def send_email(html_content, subject, recipient_email):
         port = 587  # For starttls
         smtp_server = "smtp.gmail.com"
@@ -68,7 +105,7 @@ def send_email(html_content, subject, recipient_email):
         else:
                 print("the port you chose is not supported")
 
-#function to return html content for email with up to date irrigation and moisture status
+# Return html content for email with up to date irrigation and moisture status
 def html_for_email(is_irrigating, moisture):
     if is_irrigating == True:
         irrigation_status = "irrigating"
@@ -98,7 +135,7 @@ def html_for_email(is_irrigating, moisture):
     """
     return html_content
 
-armedState = True
+# Button Press Event for On/Off
 def button_press():
         global armedState
         if armedState:
@@ -111,8 +148,7 @@ def button_press():
                 armedState = True
                 print("The system is now on")
 
-manual_override_active = False
-manual_override_start_time = 0
+# Manual Override to Force Irrigation
 def manual_override():
     if armedState:  # Check if the system is armed
         global manual_override_active, manual_override_start_time
@@ -126,9 +162,11 @@ def manual_override():
     else:
         print("Cannot activate manual override: system is not on")
 
+# Manual Prompt for E-mail Send
 def manual_send_email():
     send_email(html_content, subject, recipient_email)
 
+# Retrive Location_ID based on Zip of User
 def get_location_id(zip):
     # Build url with user's zip
     apiURl = "http://dataservice.accuweather.com/locations/v1/postalcodes/US/search?apikey=zC5MGuMmgTlHcA6tenI14U9Ehe0DmtEI&q=%s&details=true" % zip
@@ -140,10 +178,7 @@ def get_location_id(zip):
     # return location ID for future use
     return location_id
 
-# call function for getting location ID and store returned value ina variable
-#location_id = get_location_id(zip)
-
-
+# Retrieve AccuWeather Current Conditions
 def get_current_conditions(location_id):
     # build url with user's location ID
     apiURL = "http://dataservice.accuweather.com/currentconditions/v1/%s?apikey=zC5MGuMmgTlHcA6tenI14U9Ehe0DmtEI&details=true" % location_id
@@ -153,7 +188,7 @@ def get_current_conditions(location_id):
     # return the json
     return data
 
-
+# Retrieve AccuWeather Historical Information
 def get_historical_data(location_id):
     # build url with user's location ID
     apiURL = "http://dataservice.accuweather.com/currentconditions/v1/%s/historical/24?apikey=zC5MGuMmgTlHcA6tenI14U9Ehe0DmtEI&details=true" % location_id
@@ -163,7 +198,7 @@ def get_historical_data(location_id):
     # return the json
     return data
 
-
+# Retrieve AccuWeather Forecast Information
 def get_forecast(location_id):
     #build url with user's location ID
     apiURL = "http://dataservice.accuweather.com/forecasts/v1/daily/5day/%s?apikey=zC5MGuMmgTlHcA6tenI14U9Ehe0DmtEI&details=true" % location_id
@@ -173,13 +208,20 @@ def get_forecast(location_id):
     # return the json
     return data
 
+###########################
+# Retrieve Information from AccuWeather
+# 
+###########################
+
+# call function for getting location ID and store returned value in a variable
+#location_id = get_location_id(zip)
+
 # call the function  for getting current conditions and store its output in a variable
 #current_conditions = get_current_conditions(location_id)
 # call the function  for getting historical data and store its output in a variable
 #historical_data = get_historical_data(location_id)
 # call the function  for getting forecast and store its output in a variable
 #forecast = get_forecast(location_id)
-
 
 # pull specific pieces of data from the JSON that we want to base our irrigation logic on
 #precip_24_hours = historical_data[23]['PrecipitationSummary']['Past24Hours']['Imperial']['Value']
@@ -190,12 +232,10 @@ def get_forecast(location_id):
 
 #will_it_rain_amount = forecast['DailyForecasts'][1]['Day']['TotalLiquid']['Value']
 
-#variables for email subject and recipient
-subject = "Irrigation Alert"
-recipient_email = "wardc6cit381@gmail.com"
-
-#variable to track irrigation status
-is_irrigating = False
+###########################
+# Static Variables For Test Cases
+# 
+###########################
 
 #Set of test variables so that the program will always irrigate
 precip_24_hours = 0.01
@@ -206,13 +246,20 @@ will_it_rain_chance = 30
 
 will_it_rain_amount = 0.01
 
-#if the on/off button is pressed turn on/off the system
+
+###########################
+# Main Function
+# 
+###########################
+
+# Event Driven Object Creation
+# if the on/off button is pressed turn on/off the system
 on_off_button.when_pressed = button_press
-#if the manual override button is pressed override the current state of the loop and irrigate for X amount of time
+# if the manual override button is pressed override the current state of the loop and irrigate for X amount of time
 manualOverride.when_pressed = manual_override
-#if the send email button is pressed send an email with current information about the system
+# if the send email button is pressed send an email with current information about the system
 manual_send_email_button.when_pressed = manual_send_email
-# Main Loop
+
 while True:
     if manual_override_active and time.time() - manual_override_start_time >= 40:
         manual_override_active = False
