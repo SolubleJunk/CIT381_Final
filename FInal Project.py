@@ -17,7 +17,9 @@ manualOverride = Button(16, pull_up=True)
 
 manual_send_email_button = Button(20, pull_up=True)
 
-relay =  LED(19)
+relay1 = LED(6, active_high=False)
+relay2 = LED(24, active_high=False)
+
 
 #should be address 27
 thelcd = I2C_LCD_driver.lcd()
@@ -28,7 +30,7 @@ i2c_bus = busio.I2C(board.SCL, board.SDA)
 ss = Seesaw(i2c_bus, addr=0x36)
 
 # Get user's ZIP to find location ID
-zip = input("Enter you zip code: ")
+zip = "41073"
 
 #function for sending an email
 def send_email(html_content, subject, recipient_email):
@@ -96,13 +98,14 @@ def html_for_email(is_irrigating, moisture):
     """
     return html_content
 
-armedState = False
+armedState = True
 def button_press():
         global armedState
         if armedState:
                 armedState = False
                 print("The system is now off")
-                relay.off()
+                relay1.off()
+                relay2.off()
                 thelcd.lcd_clear()
         else:
                 armedState = True
@@ -114,7 +117,8 @@ def manual_override():
     if armedState:  # Check if the system is armed
         global manual_override_active, manual_override_start_time
         print("Manual Override enabled: Watering for 30 minutes")
-        relay.on()
+        relay1.on()
+        relay2.on()
         html_content = html_for_email(is_irrigating, moisture)
         send_email(html_content, subject, recipient_email)
         manual_override_active = True
@@ -217,7 +221,9 @@ while True:
         time.sleep(1)
         continue
 
-    relay.off()
+    relay1.off()
+    relay2.off()
+    is_irrigating = False
     thelcd.lcd_clear()
     #get moisture level from sensor
     moisture = ss.moisture_read()
@@ -235,13 +241,14 @@ while True:
             # If none of the above is true we need to irrigate
             else:
                 print("Irrigating")
-                relay.on()
+                relay1.on()
+                relay2.on()
                 is_irrigating = True # update irrigation status
                 html_content = html_for_email(is_irrigating, moisture) #get html content for email
                 send_email(html_content, subject, recipient_email) #send email
         else:
             print("No irrigation needed: Suffiecient soil moisture")
-            is_irrigating = True
+            #is_irrigating = False
         #display the current status of the sytem on the LCD screen
         thelcd.lcd_display_string("Status: ON", 1)
         thelcd.lcd_display_string("Moisture: " + str(moisture), 2)
@@ -253,18 +260,4 @@ while True:
 
         thelcd.lcd_display_string("Moisture: " + str(moisture), 2)
         time.sleep(10)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
