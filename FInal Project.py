@@ -137,9 +137,10 @@ def html_for_email(is_irrigating, moisture):
 
 # Button Press Event for On/Off
 def button_press():
-        global armedState
+        global armedState, is_irrigating
         if armedState:
                 armedState = False
+                is_irrigating = False
                 print("The system is now off")
                 relay1.off()
                 relay2.off()
@@ -151,10 +152,11 @@ def button_press():
 # Manual Override to Force Irrigation
 def manual_override():
     if armedState:  # Check if the system is armed
-        global manual_override_active, manual_override_start_time
+        global manual_override_active, manual_override_start_time, is_irrigating
         print("Manual Override enabled: Watering for 30 minutes")
         relay1.on()
         relay2.on()
+        is_irrigating = True
         html_content = html_for_email(is_irrigating, moisture)
         send_email(html_content, subject, recipient_email)
         manual_override_active = True
@@ -164,6 +166,7 @@ def manual_override():
 
 # Manual Prompt for E-mail Send
 def manual_send_email():
+    html_content = html_for_email(is_irrigating, moisture)
     send_email(html_content, subject, recipient_email)
 
 # Retrive Location_ID based on Zip of User
