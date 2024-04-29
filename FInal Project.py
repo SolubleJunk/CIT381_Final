@@ -8,7 +8,7 @@
 # Intelligent Watering based on weather
 # Monitoring Moisture Level with Sensor -- If Sensor Levels is too low force a watering session
 # Manual Override to Prompt Watering Regardless
-# On/Off switch for System System
+# On/Off switch for System
 # LCD Screen for visual display of On/Off and Moisture Level
 #
 # Colby Ward, Christina Umberg, Nick Carter, Dennis Briggs
@@ -138,6 +138,7 @@ def html_for_email(is_irrigating, moisture):
 # Button Press Event for On/Off
 def button_press():
         global armedState, is_irrigating
+        #if the system is on and the button is pressed turn of the relays and clear the LCD
         if armedState:
                 armedState = False
                 is_irrigating = False
@@ -145,13 +146,14 @@ def button_press():
                 relay1.off()
                 relay2.off()
                 thelcd.lcd_clear()
+        #if the system is off and the button is pressed turn the system on. This should force the main loop to run immediately 
         else:
                 armedState = True
                 print("The system is now on")
 
 # Manual Override to Force Irrigation
 def manual_override():
-    if armedState:  # Check if the system is armed
+    if armedState:  # Check if the system is armed, if so turn on the relays and send the irrigation notification
         global manual_override_active, manual_override_start_time, is_irrigating
         print("Manual Override enabled: Watering for 30 minutes")
         relay1.on()
@@ -159,6 +161,7 @@ def manual_override():
         is_irrigating = True
         html_content = html_for_email(is_irrigating, moisture)
         send_email(html_content, subject, recipient_email)
+        # these variables will be used to make sure the main loop doesnt activate while the manual override watering is occurring
         manual_override_active = True
         manual_override_start_time = time.time()
     else:
@@ -264,13 +267,17 @@ manualOverride.when_pressed = manual_override
 manual_send_email_button.when_pressed = manual_send_email
 
 while True:
+    #check how long the system has been running, if it is longer than the alloted time than turn off the manual override
+    # The number here would need to be changed based on how long you would want the manual override to go for
     if manual_override_active and time.time() - manual_override_start_time >= 40:
         manual_override_active = False
 
+    #force the main loop to start over if manual override is active
     if manual_override_active:
         time.sleep(1)
         continue
 
+    # turn off relays and clear lcd for start of loop
     relay1.off()
     relay2.off()
     is_irrigating = False
@@ -278,6 +285,7 @@ while True:
     #get moisture level from sensor
     moisture = ss.moisture_read()
     if armedState:
+        #check moisture levels
         if int(moisture) < 500:
             # check recent precipitation levels
             if float(precip_24_hours) >= 0.15:
@@ -298,16 +306,16 @@ while True:
                 send_email(html_content, subject, recipient_email) #send email
         else:
             print("No irrigation needed: Suffiecient soil moisture")
-            #is_irrigating = False
-        #display the current status of the sytem on the LCD screen
+        #display the current status of the sytem and the moisture level on the LCD screen
         thelcd.lcd_display_string("Status: ON", 1)
         thelcd.lcd_display_string("Moisture: " + str(moisture), 2)
-        # Delay the loop so it doesnt call the API too often (I had it set lower for testing purposes)
+        # Delay the loop so it doesnt call the API too often, ideally set for 3600 (1 hour)
         time.sleep(30)
     else:
         print("The system is currently turned off")
+        #display the current status of the sytem and the moisture level on the LCD screen
         thelcd.lcd_display_string("Status: OFF", 1)
-
         thelcd.lcd_display_string("Moisture: " + str(moisture), 2)
+        #sleep for 10 seconds then check if the system is armed again
         time.sleep(10)
 
